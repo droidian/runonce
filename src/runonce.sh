@@ -27,9 +27,15 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 RUNONCE_SCRIPTS="/usr/share/runonce/scripts"
+RUNONCE_TARGETS="/usr/share/runonce/targets"
 RUNONCE_DONE_STAMP_DIRECTORY="/var/lib/runonce/done"
 RUNONCE_QUEUED_STAMP_DIRECTORY="/var/lib/runonce/queue"
 RUNONCE_QUEUED_STAMP="/var/lib/runonce/runonce_queued" # Only used by the systemd-generator
+RUNONCE_QUEUED_USER="droidian"
+RUNONCE_USER_DIRECTORY="/home/${RUNONCE_QUEUED_USER}/.runonce"
+RUNONCE_DONE_STAMP_USER_DIRECTORY="${RUNONCE_USER_DIRECTORY}/done"
+RUNONCE_QUEUED_STAMP_USER_DIRECTORY="${RUNONCE_USER_DIRECTORY}/queue"
+RUNONCE_QUEUED_USER_STAMP="${RUNONCE_USER_DIRECTORY}/runonce_queued" # Only used by the systemd-generator
 
 info() {
 	echo "I: $@"
@@ -42,6 +48,21 @@ warning() {
 error() {
 	echo "E: $@" >&2
 	exit 1
+}
+
+set_directories() {
+	SCRIPT_NAME="${1}"
+
+	[ -e "${RUNONCE_TARGETS}/${SCRIPT_NAME}" ] && target=$(basename $(cat "${RUNONCE_TARGETS}/${SCRIPT_NAME}" | head -n 1))
+
+	if [[ $target =~ "user:" ]]; then
+		mkdir -p "${RUNONCE_DONE_STAMP_USER_DIRECTORY}"
+		mkdir -p "${RUNONCE_QUEUED_STAMP_USER_DIRECTORY}"
+		chown -R droidian "${RUNONCE_USER_DIRECTORY}"
+		RUNONCE_DONE_STAMP_DIRECTORY="${RUNONCE_DONE_STAMP_USER_DIRECTORY}"
+		RUNONCE_QUEUED_STAMP_DIRECTORY="${RUNONCE_QUEUED_STAMP_USER_DIRECTORY}"
+		RUNONCE_QUEUED_STAMP="${RUNONCE_QUEUED_USER_STAMP}"
+	fi
 }
 
 can_queue() {
@@ -102,12 +123,14 @@ case "$(basename ${0})" in
 	"runonce")
 		[ -n "${1}" ] || error "Usage: ${0} <script_name>"
 
+		set_directories "${1}"
 		run "${1}"
 		exit
 		;;
 	"runonce-queue")
 		[ -n "${1}" ] || error "Usage: ${0} <script_name> [VERSION]"
 
+		set_directories "${1}"
 		queue "${1}" "${2}"
 		exit
 		;;

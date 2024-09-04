@@ -1,0 +1,7 @@
+[Unit]
+Description=Runs %i once
+ConditionPathExists=%h/.runonce/queue/%i
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/runonce %i
