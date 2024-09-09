@@ -1,3 +1,5 @@
 src/runonce.sh /usr/share/runonce/
+src/include.sh /usr/share/runonce/
 src/runonce-generator /usr/lib/systemd/system-generators/
-systemd/runonce@.service /usr/lib/systemd/system/
+systemd/system/runonce@.service /usr/lib/systemd/system/
+systemd/user/runonce@.service /usr/lib/systemd/user/

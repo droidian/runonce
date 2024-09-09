@@ -26,10 +26,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-RUNONCE_SCRIPTS="/usr/share/runonce/scripts"
-RUNONCE_DONE_STAMP_DIRECTORY="/var/lib/runonce/done"
-RUNONCE_QUEUED_STAMP_DIRECTORY="/var/lib/runonce/queue"
-RUNONCE_QUEUED_STAMP="/var/lib/runonce/runonce_queued" # Only used by the systemd-generator
+source /usr/share/runonce/include.sh
 
 info() {
 	echo "I: $@"
@@ -54,6 +51,21 @@ can_queue() {
 
 	[ ${VERSION} -gt ${current_version} ]
 	return
+}
+
+handle_target() {
+	SCRIPT_NAME="${2}"
+
+	[ -e "${RUNONCE_TARGETS}/${SCRIPT_NAME}" ] && target=$(basename $(cat "${RUNONCE_TARGETS}/${SCRIPT_NAME}" | head -n 1))
+
+	if [[ $target =~ "user:" ]]; then
+		for user in $(get_homedirs); do
+			set_user_directories $user
+			"$@"
+		done
+	else
+		"$@"
+	fi
 }
 
 run() {
@@ -102,13 +114,13 @@ case "$(basename ${0})" in
 	"runonce")
 		[ -n "${1}" ] || error "Usage: ${0} <script_name>"
 
-		run "${1}"
+		handle_target run "${1}"
 		exit
 		;;
 	"runonce-queue")
 		[ -n "${1}" ] || error "Usage: ${0} <script_name> [VERSION]"
 
-		queue "${1}" "${2}"
+		handle_target queue "${1}" "${2}"
 		exit
 		;;
 	*)

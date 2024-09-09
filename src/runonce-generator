@@ -26,23 +26,36 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-RUNONCE_TARGETS="/usr/share/runonce/targets"
-RUNONCE_QUEUED_STAMP_DIRECTORY="/var/lib/runonce/queue"
-RUNONCE_QUEUED_STAMP="/var/lib/runonce/runonce_queued" # Only used by the systemd-generator
+source /usr/share/runonce/include.sh
 
-if [ -e "${RUNONCE_QUEUED_STAMP}" ]; then
-	rm -f "${RUNONCE_QUEUED_STAMP}"
+enable_services() {
+    local RUNONCE_QUEUED_STAMP_DIRECTORY="${1}"
+    local RUNONCE_QUEUED_STAMP="${2}"
+    local RUNONCE_CONTEXT="${3}"
 
-	for queued in ${RUNONCE_QUEUED_STAMP_DIRECTORY}/*; do
-		script_name="$(basename ${queued})"
+    if [ -e "${RUNONCE_QUEUED_STAMP}" ]; then
+        rm -f "${RUNONCE_QUEUED_STAMP}"
 
-		[ -e "${RUNONCE_TARGETS}/${script_name}" ] && target=$(basename $(cat "${RUNONCE_TARGETS}/${script_name}" | head -n 1))
+        for queued in "$(ls ${RUNONCE_QUEUED_STAMP_DIRECTORY}/*)"; do
+            script_name="$(basename ${queued})"
 
-		[ -n "${target}" ] || target="default.target"
+            [ -e "${RUNONCE_TARGETS}/${script_name}" ] && target=$(basename $(cat "${RUNONCE_TARGETS}/${script_name}" | head -n 1))
 
-		mkdir -p "/run/systemd/system/${target}.wants"
-		ln -s "/usr/lib/systemd/system/runonce@.service" "/run/systemd/system/${target}.wants/runonce@${script_name}.service"
-	done
-fi
+            [ -n "${target}" ] || target="default.target"
+
+            target=${target#*:}
+
+            mkdir -p "/run/systemd/${RUNONCE_CONTEXT}/${target}.wants"
+            ln -s "/usr/lib/systemd/${RUNONCE_CONTEXT}/runonce@.service" "/run/systemd/${RUNONCE_CONTEXT}/${target}.wants/runonce@${script_name}.service"
+        done
+    fi
+}
+
+enable_services ${RUNONCE_QUEUED_STAMP_DIRECTORY} ${RUNONCE_QUEUED_STAMP} system
+
+for user in $(get_homedirs); do
+	set_user_directories $user
+	enable_services ${RUNONCE_QUEUED_STAMP_DIRECTORY} ${RUNONCE_QUEUED_STAMP} user
+done
 
 exit 0
