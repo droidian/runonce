@@ -36,7 +36,7 @@ enable_services() {
     if [ -e "${RUNONCE_QUEUED_STAMP}" ]; then
         rm -f "${RUNONCE_QUEUED_STAMP}"
 
-        for queued in "$(ls ${RUNONCE_QUEUED_STAMP_DIRECTORY}/*)"; do
+        for queued in $(ls ${RUNONCE_QUEUED_STAMP_DIRECTORY}/*); do
             script_name="$(basename ${queued})"
 
             [ -e "${RUNONCE_TARGETS}/${script_name}" ] && target=$(basename $(cat "${RUNONCE_TARGETS}/${script_name}" | head -n 1))
